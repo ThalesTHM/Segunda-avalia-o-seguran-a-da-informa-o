@@ -652,7 +652,7 @@ def cifrar_texto(chave: ChavePublica, texto: str) -> str:
       </div>
       <div class="card acc-b">
         <h3>No mundo real</h3>
-        <p class="small">Usa-se <b>criptografia híbrida</b>: o RSA cifra só uma chave AES aleatória, e o AES cifra os dados (como no TLS e no PGP). Aqui usamos o RSA diretamente porque esse é o objetivo do trabalho.</p>
+        <p class="small">Usa-se <b>criptografia híbrida</b>: o RSA cifra só uma chave AES aleatória, e o AES cifra os dados (como no PGP e no TLS 1.2). No TLS 1.3, a chave é combinada por Diffie-Hellman e o RSA só assina o handshake. Aqui usamos o RSA diretamente porque esse é o objetivo do trabalho.</p>
       </div>
     </div>
   </div>

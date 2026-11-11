@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSA-OAEP em Python</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-2: #efede7;
+    --text: #1d1d1b;
+    --muted: #5f5d57;
+    --border: #dcd9d0;
+    --accent: #1f5fbf;
+    --accent-soft: #e3ecfa;
+    --pub: #1b7f4b;
+    --pub-soft: #ddf2e6;
+    --priv: #b3381f;
+    --priv-soft: #f8e1db;
+    --warn: #8a5a00;
+    --code-bg: #1e1f24;
+    --code-text: #e6e6e6;
+    --tk-kw: #c792ea;
+    --tk-str: #a5d68b;
+    --tk-com: #7f8590;
+    --tk-num: #f2b56b;
+    --tk-fn: #7fbfff;
+    --tk-bi: #f07f9c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141518;
+      --surface: #1d1f23;
+      --surface-2: #26282d;
+      --text: #ecebe7;
+      --muted: #a4a29b;
+      --border: #34363c;
+      --accent: #7fb0ff;
+      --accent-soft: #1e2c44;
+      --pub: #6fd39c;
+      --pub-soft: #193326;
+      --priv: #ff8f74;
+      --priv-soft: #3a211b;
+      --warn: #f0c060;
+      --code-bg: #0f1013;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141518;
+    --surface: #1d1f23;
+    --surface-2: #26282d;
+    --text: #ecebe7;
+    --muted: #a4a29b;
+    --border: #34363c;
+    --accent: #7fb0ff;
+    --accent-soft: #1e2c44;
+    --pub: #6fd39c;
+    --pub-soft: #193326;
+    --priv: #ff8f74;
+    --priv-soft: #3a211b;
+    --warn: #f0c060;
+    --code-bg: #0f1013;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 18px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
+  code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace; }
+
+  .deck { height: 100%; position: relative; }
+  .slide {
+    display: none;
+    height: 100%;
+    overflow-y: auto;
+    padding: 56px max(16px, calc((100vw - 1080px) / 2)) 96px;
+  }
+  .slide.ativo { display: block; animation: entra .25s ease-out; }
+  @keyframes entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .slide.ativo { animation: none; } }
+
+  .tag { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 8px; }
+  h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.1; margin: 0 0 16px; letter-spacing: -.01em; }
+  h2 { font-size: clamp(26px, 3.6vw, 36px); line-height: 1.2; margin: 0 0 20px; letter-spacing: -.01em; }
+  h3 { font-size: 19px; margin: 0 0 8px; }
+  p { margin: 0 0 14px; }
+  .lead { font-size: 21px; color: var(--muted); max-width: 46em; }
+  .muted { color: var(--muted); }
+  small, .small { font-size: 15px; }
+  ul { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  code { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: .9em; }
+  .pub { color: var(--pub); font-weight: 600; }
+  .priv { color: var(--priv); font-weight: 600; }
+
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .code-lado { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 820px) { .g2, .g3, .code-lado { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .card.pub-b { border-left: 4px solid var(--pub); }
+  .card.priv-b { border-left: 4px solid var(--priv); }
+  .card.acc-b { border-left: 4px solid var(--accent); }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+
+  pre.codigo {
+    background: var(--code-bg); color: var(--code-text);
+    border-radius: 10px; padding: 16px 18px; margin: 0 0 14px;
+    font-size: 14.5px; line-height: 1.5; overflow-x: auto;
+  }
+  pre.codigo .arq { display: block; color: var(--tk-com); font-size: 12.5px; margin-bottom: 8px; }
+  .tk-kw { color: var(--tk-kw); }
+  .tk-str { color: var(--tk-str); }
+  .tk-com { color: var(--tk-com); font-style: italic; }
+  .tk-num { color: var(--tk-num); }
+  .tk-fn { color: var(--tk-fn); }
+  .tk-bi { color: var(--tk-bi); }
+  .terminal { background: var(--code-bg); color: #d8e6d0; border-radius: 10px; padding: 16px 18px; font-size: 14px; line-height: 1.45; overflow-x: auto; margin: 0 0 14px; white-space: pre; }
+  .terminal .ok { color: #8be08b; font-weight: 700; }
+  .terminal .cmd { color: #7fbfff; }
+
+  .formula { font-family: "Cambria Math", "STIX Two Math", Georgia, serif; font-size: 22px; background: var(--surface-2); border-radius: 8px; padding: 10px 14px; display: inline-block; margin: 4px 0 10px; }
+
+  /* Fluxo (pipeline) */
+  .fluxo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 20px; }
+  .fluxo .etapa { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 15px; text-align: center; }
+  .fluxo .etapa b { display: block; font-size: 13px; color: var(--muted); font-weight: 500; }
+  .fluxo .etapa.pub-e { border-color: var(--pub); background: var(--pub-soft); }
+  .fluxo .etapa.priv-e { border-color: var(--priv); background: var(--priv-soft); }
+  .fluxo .seta { color: var(--muted); font-size: 18px; }
+
+  /* Alice e Bob */
+  .cena { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin: 8px 0 18px; }
+  .pessoa { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .pessoa .nome { font-weight: 700; font-size: 20px; }
+  .canal { text-align: center; color: var(--muted); font-size: 14px; min-width: 120px; }
+  .canal .linha { border-top: 2px dashed var(--border); margin: 6px 0; }
+  .chip { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 13.5px; font-weight: 600; margin: 3px 2px; }
+  .chip.pub { background: var(--pub-soft); color: var(--pub); }
+  .chip.priv { background: var(--priv-soft); color: var(--priv); }
+  @media (max-width: 620px) { .cena { grid-template-columns: 1fr; } .canal { min-width: 0; } }
+
+  /* Layout do bloco OAEP */
+  .bytes { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin: 8px 0 6px; font-size: 13.5px; }
+  .bytes div { padding: 10px 6px; text-align: center; border-right: 1px solid var(--border); min-width: 0; }
+  .bytes div:last-child { border-right: 0; }
+  .bytes .z { background: var(--surface-2); flex: 0 0 48px; }
+  .bytes .s { background: var(--priv-soft); flex: 2; }
+  .bytes .d { background: var(--accent-soft); flex: 7; }
+  .bytes.db .h { background: var(--pub-soft); flex: 2; }
+  .bytes.db .ps { background: var(--surface-2); flex: 3; }
+  .bytes.db .um { background: var(--surface); flex: 0 0 48px; }
+  .bytes.db .m { background: var(--accent-soft); flex: 3; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 14px; }
+  .tabela-wrap { overflow-x: auto; }
+
+  /* Demo interativa */
+  .demo-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 14px; }
+  .demo-form label { display: flex; flex-direction: column; font-size: 14px; color: var(--muted); gap: 4px; }
+  .demo-form input { font: inherit; font-size: 16px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+  .demo-form input.num { width: 110px; }
+  .demo-form input.txt { width: min(420px, 100%); }
+  .demo-form label.cresce { flex: 1 1 260px; }
+  .demo-form label.cresce input { width: 100%; }
+  .chaves-demo { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .erro-demo { color: var(--priv); font-weight: 600; }
+  td.rep { background: var(--priv-soft); }
+
+  /* Navegação */
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(6px); border-top: 1px solid var(--border);
+  }
+  .nav button {
+    font: inherit; font-size: 15px; cursor: pointer;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px;
+  }
+  .nav button:hover { border-color: var(--accent); }
+  .nav button:focus-visible, .demo-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nav .contador { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .progresso { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); transition: width .2s; }
+
+  .capa { display: flex; flex-direction: column; justify-content: center; min-height: calc(100% - 40px); }
+  .capa .meta { color: var(--muted); margin-top: 24px; font-size: 16px; }
+  .dica { font-size: 14px; color: var(--muted); margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="progresso" id="progresso"></div>
+<main class="deck" id="deck">
+
+<!-- 1. CAPA -->
+<section class="slide">
+  <div class="capa">
+    <p class="tag">Segurança da Informação · 2ª avaliação</p>
+    <h1>Criptografia assimétrica com RSA-OAEP</h1>
+    <p class="lead">Implementação do RSA do zero, em Python puro: geração de chaves, cifragem e decifragem de qualquer mensagem.</p>
+    <div class="meta">
+      <div><b>Equipe:</b> Thales Henrique · (integrante 2) · (integrante 3) · (integrante 4)</div>
+      <div>Novembro de 2026</div>
+    </div>
+    <p class="dica">Use ← → ou a barra de espaço para navegar · tecla T alterna o tema</p>
+  </div>
+</section>
+
+<!-- 2. PROBLEMA -->
+<section class="slide">
+  <p class="tag">Motivação</p>
+  <h2>Como combinar um segredo sem se encontrar antes?</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Criptografia simétrica</h3>
+      <p>Uma única chave serve para cifrar e para decifrar (ex.: AES).</p>
+      <p class="muted">Problema: a chave precisa chegar ao destinatário por um canal seguro. Se alguém a intercepta, lê tudo.</p>
+    </div>
+    <div class="card acc-b">
+      <h3>Criptografia assimétrica</h3>
+      <p>São duas chaves matematicamente ligadas:</p>
+      <ul>
+        <li><span class="pub">pública</span>: cifra. Pode ser divulgada a todos.</li>
+        <li><span class="priv">privada</span>: decifra. Fica só com o dono.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cena" style="margin-top:22px">
+    <div class="pessoa">
+      <div class="nome">Alice</div>
+      <div class="small muted">remetente</div>
+      <div><span class="chip pub">usa a pública de Bob</span></div>
+    </div>
+    <div class="canal">
+      texto cifrado
+      <div class="linha"></div>
+      canal inseguro (internet)
+    </div>
+    <div class="pessoa">
+      <div class="nome">Bob</div>
+      <div class="small muted">destinatário</div>
+      <div><span class="chip pub">publica (n, e)</span><span class="chip priv">guarda d</span></div>
+    </div>
+  </div>
+  <p class="muted">Quem intercepta o canal vê a chave pública e o texto cifrado, mas sem a chave privada não consegue decifrar.</p>
+</section>
+
+<!-- 3. RSA MATEMÁTICA -->
+<section class="slide">
+  <p class="tag">O algoritmo</p>
+  <h2>RSA (Rivest, Shamir e Adleman, 1977)</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Geração das chaves</h3>
+      <ol style="margin:0;padding-left:22px">
+        <li>Sortear dois primos grandes <b>p</b> e <b>q</b> (1024 bits cada)</li>
+        <li><span class="formula">n = p · q</span></li>
+        <li><span class="formula">λ(n) = mmc(p − 1, q − 1)</span></li>
+        <li>Escolher <b>e = 65537</b> com mdc(e, λ(n)) = 1</li>
+        <li><span class="formula">d = e⁻¹ mod λ(n)</span></li>
+      </ol>
+      <p class="small" style="margin-top:10px">Chave <span class="pub">pública: (n, e)</span>. Chave <span class="priv">privada: d</span>.</p>
+    </div>
+    <div>
+      <div class="card pub-b" style="margin-bottom:16px">
+        <h3>Cifrar (chave pública)</h3>
+        <span class="formula">c = m<sup>e</sup> mod n</span>
+      </div>
+      <div class="card priv-b" style="margin-bottom:16px">
+        <h3>Decifrar (chave privada)</h3>
+        <span class="formula">m = c<sup>d</sup> mod n</span>
+      </div>
+      <div class="card">
+        <h3>Por que é seguro?</h3>
+        <p class="small">Como <i>e·d ≡ 1 (mod λ(n))</i>, temos <i>(m<sup>e</sup>)<sup>d</sup> ≡ m (mod n)</i>. Calcular <b>d</b> exige <b>λ(n)</b>, e calcular λ(n) exige <b>fatorar n</b>. Para um n de 2048 bits, não há algoritmo conhecido que faça isso em tempo viável.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. EXEMPLO PEQUENO -->
+<section class="slide">
+  <p class="tag">Exemplo com números pequenos</p>
+  <h2>p = 61, q = 53, e = 17</h2>
+  <div class="grid g2">
+    <div class="card">
+      <table>
+        <tr><td>n = 61 · 53</td><td class="mono"><b>3233</b></td></tr>
+        <tr><td>λ(n) = mmc(60, 52)</td><td class="mono"><b>780</b></td></tr>
+        <tr><td>e</td><td class="mono"><b>17</b></td></tr>
+        <tr><td>d = 17⁻¹ mod 780</td><td class="mono"><b>413</b> <span class="muted">(17 · 413 = 7021 = 9 · 780 + 1)</span></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <p><b>Mensagem</b> m = 65 (letra “A” em ASCII)</p>
+      <p class="pub">c = 65<sup>17</sup> mod 3233 = 2790</p>
+      <p class="priv">m = 2790<sup>413</sup> mod 3233 = 65 ✓</p>
+      <p class="small muted">Esse mesmo exemplo é verificado nos testes automatizados (<code>TestExemploLivroTexto</code>), que também conferem a ida e volta de <b>todas</b> as 3233 mensagens possíveis.</p>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:16px">No programa real, p e q têm 1024 bits (cerca de 309 dígitos cada) e n tem 2048 bits.</p>
+</section>
+
+<!-- 5. ARQUITETURA -->
+<section class="slide">
+  <p class="tag">Visão geral do código</p>
+  <h2>Arquitetura do projeto</h2>
+  <div class="fluxo" aria-label="Fluxo da cifragem">
+    <div class="etapa">texto<b>str</b></div><span class="seta">→</span>
+    <div class="etapa">UTF-8<b>bytes</b></div><span class="seta">→</span>
+    <div class="etapa">blocos<b>≤ 190 bytes</b></div><span class="seta">→</span>
+    <div class="etapa">OAEP<b>+ semente aleatória</b></div><span class="seta">→</span>
+    <div class="etapa pub-e">m<sup>e</sup> mod n<b>chave pública</b></div><span class="seta">→</span>
+    <div class="etapa">Base64<b>texto cifrado</b></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <table>
+        <tr><th>Arquivo</th><th>Responsabilidade</th></tr>
+        <tr><td><code>aritmetica.py</code></td><td>Euclides estendido, inverso modular, Miller-Rabin, geração de primos</td></tr>
+        <tr><td><code>chaves.py</code></td><td>Gera, valida, salva e carrega o par de chaves</td></tr>
+        <tr><td><code>oaep.py</code></td><td>Preenchimento OAEP (SHA-256 + MGF1)</td></tr>
+        <tr><td><code>rsa.py</code></td><td>m<sup>e</sup>, c<sup>d</sup> com CRT e blinding, blocos, Base64</td></tr>
+        <tr><td><code>main.py</code></td><td>Linha de comando: <code>demo</code>, <code>gerar-chaves</code>, <code>cifrar</code>, <code>decifrar</code></td></tr>
+        <tr><td><code>tests/</code></td><td>23 testes automatizados</td></tr>
+      </table>
+    </div>
+    <div class="card acc-b">
+      <h3>Princípios</h3>
+      <ul>
+        <li><b>Sem bibliotecas de criptografia</b>: tudo está visível no código</li>
+        <li>Segue a especificação oficial <b>RFC 8017</b> (PKCS #1 v2.2)</li>
+        <li>Usa só a biblioteca padrão (<code>secrets</code>, <code>hashlib</code>)</li>
+        <li>Cada módulo tem uma única responsabilidade</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 6. PRIMOS -->
+<section class="slide">
+  <p class="tag">Código 1 · aritmetica.py</p>
+  <h2>Gerando primos de 1024 bits</h2>
+  <div class="grid code-lado">
+    <pre class="codigo" data-arq="cripto_rsa/aritmetica.py">def miller_rabin(n: int, rodadas: int = 40) -> bool:
+    if n < 2:
+        return False
+    for p in PRIMOS_PEQUENOS:
+        if n % p == 0:
+            return n == p
+
+    # Escreve n - 1 como d * 2^s, com d ímpar.
+    d, s = n - 1, 0
+    while d % 2 == 0:
+        d //= 2
+        s += 1
+
+    for _ in range(rodadas):
+        a = secrets.randbelow(n - 3) + 2  # base aleatória em [2, n-2]
+        x = pow(a, d, n)
+        if x in (1, n - 1):
+            continue
+        for _ in range(s - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False  # "a" é testemunha de que n é composto
+    return True
+
+
+def gerar_primo(bits: int) -> int:
+    while True:
+        candidato = secrets.randbits(bits)
+        candidato |= (1 << (bits - 1)) | (1 << (bits - 2)) | 1
+        if miller_rabin(candidato):
+            return candidato</pre>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Miller-Rabin</h3>
+        <p class="small">Teste probabilístico: um primo sempre passa. Um número composto passa em uma rodada com chance de no máximo ¼. Com <b>40 rodadas</b>, a chance de erro fica abaixo de 4<sup>−40</sup> ≈ 10<sup>−24</sup>.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Filtro rápido</h3>
+        <p class="small">Antes do teste, o candidato é dividido pelos primos menores que 2000 (crivo de Eratóstenes). Isso descarta a maioria dos compostos quase de graça.</p>
+      </div>
+      <div class="card">
+        <h3>Bits fixados</h3>
+        <p class="small">Os 2 bits mais altos ficam em 1, o que garante que n = p·q tenha exatamente 2048 bits. O bit mais baixo fica em 1, o que garante um candidato ímpar. O módulo <code>secrets</code> usa o gerador seguro do sistema operacional.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. CHAVES -->
+<section class="slide">
+  <p class="tag">Código 2 · chaves.py</p>
+  <h2>Montando o par de chaves</h2>
+  <div class="grid code-lado">
+    <pre class="codigo" data-arq="cripto_rsa/chaves.py">def construir_chave_privada(p, q, e=E_PADRAO) -> ChavePrivada:
+    if p == q:
+        raise ValueError("p e q devem ser primos distintos")
+    lambda_n = mmc(p - 1, q - 1)
+    if mdc(e, lambda_n) != 1:
+        raise ValueError("e não é coprimo com λ(n)")
+    d = inverso_modular(e, lambda_n)
+    return ChavePrivada(
+        n=p * q,
+        e=e,
+        d=d,
+        p=p,
+        q=q,
+        dp=d % (p - 1),
+        dq=d % (q - 1),
+        qinv=inverso_modular(q, p),
+    )
+
+
+def gerar_par_de_chaves(bits=2048, e=E_PADRAO):
+    ...
+    while True:
+        p = gerar_primo(bits_p)
+        q = gerar_primo(bits_q)
+        # p e q muito próximos permitem fatorar n pelo método de Fermat.
+        if abs(p - q).bit_length() <= bits_p - 100:
+            continue
+        ...</pre>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Inverso modular</h3>
+        <p class="small"><code>inverso_modular</code> usa o <b>algoritmo de Euclides estendido</b>: encontra x e y com <i>e·x + λ·y = 1</i>, e então <i>d = x mod λ</i>.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>dp, dq, qinv</h3>
+        <p class="small">São valores pré-calculados para o <b>Teorema Chinês do Resto</b>, que deixa a decifragem cerca de 3 vezes mais rápida (próximos slides).</p>
+      </div>
+      <div class="card">
+        <h3>Cuidados extras</h3>
+        <ul class="small">
+          <li><code>repr=False</code> nos campos secretos: <code>print(chave)</code> não mostra d, p nem q</li>
+          <li><code>validar()</code> confere a matemática ao carregar a chave de um arquivo</li>
+          <li><code>.gitignore</code> impede que a chave privada vá para o GitHub</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. POR QUE OAEP -->
+<section class="slide">
+  <p class="tag">Preenchimento (padding)</p>
+  <h2>Por que não usar o RSA “puro”?</h2>
+  <div class="grid g3">
+    <div class="card priv-b">
+      <h3>Determinístico</h3>
+      <p class="small">A mesma mensagem sempre gera o mesmo texto cifrado. Um atacante cifra “SIM” e “NÃO” com a chave pública e compara com o que interceptou.</p>
+    </div>
+    <div class="card priv-b">
+      <h3>Maleável</h3>
+      <p class="small">Multiplicar c por 2<sup>e</sup> faz o destinatário decifrar <b>2·m</b>, e ninguém percebe a alteração.</p>
+    </div>
+    <div class="card priv-b">
+      <h3>Mensagens curtas</h3>
+      <p class="small">Se m<sup>e</sup> &lt; n, o “mod n” não tem efeito, e basta tirar a raiz e-ésima de c para recuperar m.</p>
+    </div>
+  </div>
+  <h3 style="margin-top:26px">A solução: OAEP (Bellare e Rogaway, 1994)</h3>
+  <p class="small muted">Antes de elevar a e, a mensagem é misturada com uma <b>semente aleatória</b> de 32 bytes e recebe um hash de verificação. Bloco de k = 256 bytes:</p>
+  <div class="bytes" aria-label="EM">
+    <div class="z">00</div>
+    <div class="s">semente mascarada<br><small>32 bytes</small></div>
+    <div class="d">DB mascarado<br><small>223 bytes</small></div>
+  </div>
+  <div class="bytes db" aria-label="DB">
+    <div class="h">lHash<br><small>SHA-256</small></div>
+    <div class="ps">PS<br><small>zeros</small></div>
+    <div class="um">01</div>
+    <div class="m">mensagem<br><small>≤ 190 bytes</small></div>
+  </div>
+  <p class="small muted">Os 190 bytes vêm de 256 − 2·32 − 2. A semente mascara o DB, e o DB mascara a semente (MGF1 com SHA-256).</p>
+</section>
+
+<!-- 9. OAEP CÓDIGO -->
+<section class="slide">
+  <p class="tag">Código 3 · oaep.py</p>
+  <h2>Codificação OAEP (RFC 8017 §7.1)</h2>
+  <div class="grid code-lado">
+    <pre class="codigo" data-arq="cripto_rsa/oaep.py">def mgf1(semente: bytes, tamanho: int) -> bytes:
+    saida = bytearray()
+    contador = 0
+    while len(saida) < tamanho:
+        saida += HASH(semente + contador.to_bytes(4, "big")).digest()
+        contador += 1
+    return bytes(saida[:tamanho])
+
+
+def codificar(mensagem: bytes, k: int, rotulo: bytes = b"") -> bytes:
+    if len(mensagem) > tamanho_maximo_mensagem(k):
+        raise ValueError("mensagem grande demais para um bloco OAEP")
+
+    l_hash = HASH(rotulo).digest()
+    ps = b"\x00" * (tamanho_maximo_mensagem(k) - len(mensagem))
+    db = l_hash + ps + b"\x01" + mensagem
+
+    semente = secrets.token_bytes(TAMANHO_HASH)
+    db_mascarado = _xor(db, mgf1(semente, k - TAMANHO_HASH - 1))
+    semente_mascarada = _xor(semente, mgf1(db_mascarado, TAMANHO_HASH))
+
+    return b"\x00" + semente_mascarada + db_mascarado</pre>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>MGF1</h3>
+        <p class="small">“Estica” um valor curto até o tamanho desejado, concatenando SHA-256(semente ‖ 0), SHA-256(semente ‖ 1) e assim por diante.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Decodificação</h3>
+        <p class="small">Desfaz os dois XORs e confere: o 1º byte é 00, o lHash bate, o PS só tem zeros e existe o separador 01.</p>
+      </div>
+      <div class="card priv-b">
+        <h3>Erro genérico</h3>
+        <p class="small">Qualquer falha gera o mesmo <code>ErroDecifragem("falha na decifragem")</code>. Se o programa dissesse <i>qual</i> verificação falhou, um atacante poderia usar isso para decifrar a mensagem (ataque de Manger, 2001).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. CIFRAR/DECIFRAR -->
+<section class="slide">
+  <p class="tag">Código 4 · rsa.py</p>
+  <h2>Cifragem e decifragem</h2>
+  <div class="grid code-lado">
+    <pre class="codigo" data-arq="cripto_rsa/rsa.py">def rsaep(chave: ChavePublica, m: int) -> int:
+    """Primitiva de cifragem: c = m^e mod n."""
+    return pow(m, chave.e, chave.n)
+
+
+def _rsadp_crt(chave: ChavePrivada, c: int) -> int:
+    m1 = pow(c, chave.dp, chave.p)
+    m2 = pow(c, chave.dq, chave.q)
+    h = (chave.qinv * (m1 - m2)) % chave.p
+    return m2 + h * chave.q
+
+
+def rsadp(chave: ChavePrivada, c: int) -> int:
+    """m = c^d mod n, com blinding."""
+    while True:
+        r = secrets.randbelow(chave.n - 2) + 2
+        if mdc(r, chave.n) == 1:
+            break
+    c_cego = (c * pow(r, chave.e, chave.n)) % chave.n
+    m_cego = _rsadp_crt(chave, c_cego)
+    return (m_cego * inverso_modular(r, chave.n)) % chave.n
+
+
+def cifrar_bloco(chave: ChavePublica, bloco: bytes) -> bytes:
+    k = chave.tamanho_bytes
+    em = oaep.codificar(bloco, k)
+    c = rsaep(chave, bytes_para_int(em))
+    return int_para_bytes(c, k)</pre>
+    <div>
+      <div class="card pub-b" style="margin-bottom:14px">
+        <h3>pow(m, e, n)</h3>
+        <p class="small">O <code>pow</code> do Python faz <b>exponenciação modular rápida</b> (quadrados sucessivos): cerca de 2048 multiplicações em vez de 65537.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>CRT (Teorema Chinês do Resto)</h3>
+        <p class="small">Em vez de uma exponenciação módulo n (2048 bits), o código faz duas módulo p e q (1024 bits cada) e junta os resultados com a fórmula de Garner. É cerca de 3 vezes mais rápido.</p>
+      </div>
+      <div class="card priv-b">
+        <h3>Blinding</h3>
+        <p class="small">c é multiplicado por r<sup>e</sup>, com r aleatório, antes de usar a chave privada, e o fator r é removido no final. O tempo de cálculo deixa de depender do c que o atacante escolheu, o que protege contra <b>ataques de temporização</b>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. MENSAGENS LONGAS -->
+<section class="slide">
+  <p class="tag">Código 5 · rsa.py</p>
+  <h2>Mensagens de qualquer tamanho</h2>
+  <div class="grid code-lado">
+    <pre class="codigo" data-arq="cripto_rsa/rsa.py">def cifrar(chave: ChavePublica, mensagem: bytes) -> bytes:
+    k = chave.tamanho_bytes
+    limite = oaep.tamanho_maximo_mensagem(k)
+    pedacos = [mensagem[i : i + limite] for i in range(0, len(mensagem), limite)]
+    if not pedacos:
+        pedacos = [b""]  # mensagem vazia também vira um bloco válido
+    return b"".join(cifrar_bloco(chave, p) for p in pedacos)
+
+
+def decifrar(chave: ChavePrivada, cifrado: bytes) -> bytes:
+    k = chave.tamanho_bytes
+    if not cifrado or len(cifrado) % k != 0:
+        raise ErroDecifragem("falha na decifragem")
+    blocos = [cifrado[i : i + k] for i in range(0, len(cifrado), k)]
+    return b"".join(decifrar_bloco(chave, b) for b in blocos)
+
+
+def cifrar_texto(chave: ChavePublica, texto: str) -> str:
+    return base64.b64encode(cifrar(chave, texto.encode("utf-8"))).decode("ascii")</pre>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Divisão em blocos</h3>
+        <p class="small">Um bloco de 2048 bits comporta no máximo <b>190 bytes</b>. Uma mensagem de 1000 bytes vira 6 blocos cifrados de 256 bytes cada.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <h3>Texto: UTF-8 e Base64</h3>
+        <p class="small">O texto é convertido em bytes UTF-8, o que suporta acentos e emoji. O resultado é codificado em Base64 para poder ser copiado e colado como texto.</p>
+      </div>
+      <div class="card acc-b">
+        <h3>No mundo real</h3>
+        <p class="small">Usa-se <b>criptografia híbrida</b>: o RSA cifra só uma chave AES aleatória, e o AES cifra os dados (como no TLS e no PGP). Aqui usamos o RSA diretamente porque esse é o objetivo do trabalho.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12. EXECUÇÃO -->
+<section class="slide">
+  <p class="tag">Funcionamento</p>
+  <h2>Executando o programa</h2>
+<div class="terminal"><span class="cmd">$ python main.py demo -m "Olá, turma! Mensagem secreta 🔐"</span>
+
+=== 1. Gerando par de chaves RSA de 2048 bits ===================
+Tempo: 0.40 s
+n (módulo, público) = c9a6519bb1b9450ec91bd04874a2a484415f007f...c322e9960dd06c6de3702acaf00b23784b2660b9
+e (expoente público) = 65537
+d (expoente privado) = 3e137c45f0c537142126f5cc8853554ffd8bd06c...26fc7029b8c837034b0e1c875408975b1cfc474d  [SECRETO]
+
+=== 2. Mensagem original ========================================
+Olá, turma! Mensagem secreta 🔐
+34 bytes em UTF-8 (cada bloco OAEP comporta até 190 bytes)
+
+=== 3. Cifrando com a chave PÚBLICA =============================
+1 bloco(s) de 256 bytes
+Base64: PSGRh4mxa/wj5d5uh/Bc3e2V7mfyqkOEuhDIK8nK...srWEiE18SFWz+2K2SvN4KPsTuUdrehau8jYsRA==
+Cifrando de novo a MESMA mensagem: CYr0zJLTVKD2/kO5xLpF...nRVTtPjFdgtCi025CA==
+Os textos cifrados são diferentes? True  (OAEP é aleatório)
+
+=== 4. Decifrando com a chave PRIVADA ===========================
+Olá, turma! Mensagem secreta 🔐
+
+=== 5. Verificação ==============================================
+<span class="ok">SUCESSO: a mensagem decifrada é idêntica à original.</span>
+<span class="ok">Texto cifrado com 1 bit alterado foi REJEITADO, como esperado.</span></div>
+  <div class="card">
+    <h3>Uso separado (Alice e Bob)</h3>
+    <pre class="terminal" style="margin:0">python main.py gerar-chaves --bits 2048 --pasta chaves
+python main.py cifrar   --chave chaves/publica.json -m "Encontro às 15h" -s cifrado.txt
+python main.py decifrar --chave chaves/privada.json -a cifrado.txt</pre>
+  </div>
+</section>
+
+<!-- 13. TESTES -->
+<section class="slide">
+  <p class="tag">Qualidade</p>
+  <h2>23 testes automatizados</h2>
+  <div class="grid g2">
+    <div class="card tabela-wrap">
+      <table>
+        <tr><th>Grupo</th><th>O que é verificado</th></tr>
+        <tr><td>Aritmética</td><td>Euclides estendido, inverso modular, Miller-Rabin com primos conhecidos e <b>números de Carmichael</b> (561, 1105, 8911)</td></tr>
+        <tr><td>Livro-texto</td><td>p = 61, q = 53: c = 2790, e a ida e volta das 3233 mensagens possíveis</td></tr>
+        <tr><td>Ida e volta</td><td>Mensagem vazia, 1 byte, acentos e emoji, todos os 256 bytes, 1000 bytes (vários blocos), tamanhos no limite exato do bloco</td></tr>
+        <tr><td>Segurança</td><td>Cifragem aleatória, texto cifrado não contém a mensagem, adulteração detectada, chave errada rejeitada, <code>repr</code> não vaza segredos</td></tr>
+        <tr><td>Entradas inválidas</td><td>Tamanho errado, Base64 inválido, chave menor que 1024 bits</td></tr>
+        <tr><td>Persistência</td><td>Salvar e carregar as chaves em JSON</td></tr>
+      </table>
+    </div>
+    <div>
+<div class="terminal"><span class="cmd">$ python -m unittest discover -s tests</span>
+.......................
+----------------------------------------------------------------------
+Ran 23 tests in 0.278s
+
+<span class="ok">OK</span></div>
+      <div class="card priv-b">
+        <h3>Os testes encontraram um bug</h3>
+        <p class="small">Um texto “Base64” com acentos lançava <code>ValueError</code> em vez de <code>ErroDecifragem</code>. O teste <code>test_entradas_invalidas</code> pegou o problema, e a correção foi tratar as duas exceções.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 14. DEMO INTERATIVA -->
+<section class="slide">
+  <p class="tag">Experimente</p>
+  <h2>RSA de livro-texto no navegador</h2>
+  <p class="small muted">Versão simplificada, com primos pequenos e sem OAEP, que cifra cada byte separadamente. Repare que bytes iguais geram o mesmo texto cifrado: esse é o problema que o OAEP resolve.</p>
+  <div class="demo-form">
+    <label>p (primo)<input class="num" id="dp" type="number" value="61" min="2" max="99991"></label>
+    <label>q (primo)<input class="num" id="dq" type="number" value="53" min="2" max="99991"></label>
+    <label class="cresce">mensagem<input class="txt" id="dm" type="text" value="banana 🔐" maxlength="60"></label>
+  </div>
+  <div id="dchaves" class="chaves-demo"></div>
+  <div id="derro" class="erro-demo"></div>
+  <div class="card tabela-wrap">
+    <table id="dtabela"></table>
+  </div>
+  <p id="dfinal" style="margin-top:12px"></p>
+</section>
+
+<!-- 15. SEGURANÇA -->
+<section class="slide">
+  <p class="tag">Decisões técnicas</p>
+  <h2>Segurança: o que foi feito e o que falta</h2>
+  <div class="grid g2">
+    <div class="card pub-b">
+      <h3>Implementado</h3>
+      <ul class="small">
+        <li><b>OAEP + SHA-256</b>: cifragem aleatória e com verificação de integridade</li>
+        <li><b>secrets</b>: aleatoriedade criptograficamente segura</li>
+        <li>Chaves de <b>2048 bits</b> (recomendação do NIST); mínimo de 1024</li>
+        <li><b>e = 65537</b>; p e q distantes (contra o método de Fermat)</li>
+        <li><b>Blinding</b> contra ataques de temporização</li>
+        <li><b>Erro genérico</b> contra o ataque de Manger</li>
+        <li>Validação da chave carregada; segredos fora do <code>repr</code></li>
+      </ul>
+    </div>
+    <div class="card priv-b">
+      <h3>Limitações (projeto didático)</h3>
+      <ul class="small">
+        <li>Python puro <b>não garante tempo constante</b>. Em produção, use bibliotecas auditadas, como <code>cryptography</code> e OpenSSL.</li>
+        <li>Não usamos criptografia híbrida (RSA + AES), que é o padrão para dados grandes.</li>
+        <li>A chave privada é salva sem senha. O ideal seria usar PKCS#8 com cifragem.</li>
+        <li>O programa não faz assinatura digital, então não há autenticação do remetente.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 16. CONCLUSÃO -->
+<section class="slide">
+  <p class="tag">Encerramento</p>
+  <h2>Conclusão</h2>
+  <div class="grid g2">
+    <div class="card acc-b">
+      <ul>
+        <li>Implementamos o <b>RSA completo</b>: primos, chaves, cifragem e decifragem</li>
+        <li>A mensagem original é recuperada <b>exatamente</b>, com qualquer tamanho e com acentos ou emoji</li>
+        <li>O <b>OAEP</b> torna a cifragem aleatória e detecta adulteração</li>
+        <li>Há <b>23 testes</b> automatizados, e todos passam</li>
+        <li>Na criptografia, segurança depende tanto dos <b>detalhes de implementação</b> quanto da matemática</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Referências</h3>
+      <ul class="small">
+        <li>Rivest, Shamir, Adleman: <i>A Method for Obtaining Digital Signatures and Public-Key Cryptosystems</i>, 1978</li>
+        <li><b>RFC 8017</b>: PKCS #1: RSA Cryptography Specifications v2.2</li>
+        <li>Bellare, Rogaway: <i>Optimal Asymmetric Encryption</i>, 1994</li>
+        <li>Manger: <i>A Chosen Ciphertext Attack on RSA OAEP</i>, 2001</li>
+        <li>NIST SP 800-57: Recommendation for Key Management</li>
+        <li>Stallings: <i>Criptografia e Segurança de Redes</i></li>
+      </ul>
+    </div>
+  </div>
+  <p style="margin-top:22px" class="muted">Código: github.com/ThalesTHM/Segunda-avalia-o-seguran-a-da-informa-o</p>
+  <h1 style="margin-top:20px">Obrigado! Perguntas?</h1>
+</section>
+
+</main>
+
+<nav class="nav" aria-label="Navegação dos slides">
+  <button id="ant" type="button">← Anterior</button>
+  <span class="contador" id="contador">1 / 1</span>
+  <span>
+    <button id="tema" type="button" title="Alternar tema (T)">◐</button>
+    <button id="prox" type="button">Próximo →</button>
+  </span>
+</nav>
+
+<script>
+(() => {
+  // ---------- Destaque de sintaxe Python ----------
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const re = new RegExp([
+    "(#[^\\n]*)",                                                     // 1 comentário
+    '("""[\\s\\S]*?"""|[rbfu]*"(?:\\\\.|[^"\\\\\\n])*"|[rbfu]*\'(?:\\\\.|[^\'\\\\\\n])*\')', // 2 string
+    "\\b(def|class)(\\s+)(\\w+)",                                      // 3,4,5 definição
+    "\\b(return|if|elif|else|for|while|in|not|and|or|is|import|from|as|raise|try|except|with|break|continue|None|True|False|lambda|pass)\\b", // 6
+    "\\b(pow|len|range|bytes|bytearray|int|abs|any|print|isinstance|ValueError)\\b", // 7 builtins
+    "\\b(\\d+)\\b"                                                     // 8 número
+  ].join("|"), "g");
+  document.querySelectorAll("pre.codigo").forEach(pre => {
+    const fonte = pre.textContent;
+    let html = "", ultimo = 0, m;
+    while ((m = re.exec(fonte))) {
+      html += esc(fonte.slice(ultimo, m.index));
+      if (m[1]) html += `<span class="tk-com">${esc(m[1])}</span>`;
+      else if (m[2]) html += `<span class="tk-str">${esc(m[2])}</span>`;
+      else if (m[3]) html += `<span class="tk-kw">${m[3]}</span>${m[4]}<span class="tk-fn">${m[5]}</span>`;
+      else if (m[6]) html += `<span class="tk-kw">${m[6]}</span>`;
+      else if (m[7]) html += `<span class="tk-bi">${m[7]}</span>`;
+      else if (m[8]) html += `<span class="tk-num">${m[8]}</span>`;
+      ultimo = re.lastIndex;
+    }
+    html += esc(fonte.slice(ultimo));
+    const arq = pre.dataset.arq ? `<span class="arq">${esc(pre.dataset.arq)}</span>` : "";
+    pre.innerHTML = arq + html;
+  });
+
+  // ---------- Navegação ----------
+  const slides = [...document.querySelectorAll(".slide")];
+  const contador = document.getElementById("contador");
+  const progresso = document.getElementById("progresso");
+  let atual = 0;
+  const inicial = parseInt(location.hash.slice(1), 10);
+  if (inicial >= 1 && inicial <= slides.length) atual = inicial - 1;
+
+  function mostrar(i) {
+    atual = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => s.classList.toggle("ativo", j === atual));
+    slides[atual].scrollTop = 0;
+    contador.textContent = `${atual + 1} / ${slides.length}`;
+    progresso.style.width = `${((atual + 1) / slides.length) * 100}%`;
+    history.replaceState(null, "", `#${atual + 1}`);
+  }
+  document.getElementById("ant").onclick = () => mostrar(atual - 1);
+  document.getElementById("prox").onclick = () => mostrar(atual + 1);
+
+  const raiz = document.documentElement;
+  function alternarTema() {
+    const escuro = raiz.dataset.theme
+      ? raiz.dataset.theme === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+    raiz.dataset.theme = escuro ? "light" : "dark";
+    try { localStorage.setItem("tema-rsa", raiz.dataset.theme); } catch (e) {}
+  }
+  try { const t = localStorage.getItem("tema-rsa"); if (t) raiz.dataset.theme = t; } catch (e) {}
+  document.getElementById("tema").onclick = alternarTema;
+
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT") return;
+    if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); mostrar(atual + 1); }
+    else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); mostrar(atual - 1); }
+    else if (e.key === "Home") mostrar(0);
+    else if (e.key === "End") mostrar(slides.length - 1);
+    else if (e.key.toLowerCase() === "t") alternarTema();
+  });
+  let toqueX = null;
+  document.addEventListener("touchstart", e => { toqueX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener("touchend", e => {
+    if (toqueX === null) return;
+    const dx = e.changedTouches[0].clientX - toqueX;
+    if (Math.abs(dx) > 60 && e.target.tagName !== "INPUT") mostrar(atual + (dx < 0 ? 1 : -1));
+    toqueX = null;
+  });
+  mostrar(atual);
+
+  // ---------- Demo interativa (RSA de livro-texto, BigInt) ----------
+  const powmod = (b, e, m) => {
+    let r = 1n; b %= m;
+    while (e > 0n) { if (e & 1n) r = (r * b) % m; b = (b * b) % m; e >>= 1n; }
+    return r;
+  };
+  const egcd = (a, b) => {
+    let [x0, x1, y0, y1] = [1n, 0n, 0n, 1n];
+    while (b) { const q = a / b; [a, b] = [b, a - q * b]; [x0, x1] = [x1, x0 - q * x1]; [y0, y1] = [y1, y0 - q * y1]; }
+    return [a, x0, y0];
+  };
+  const gcd = (a, b) => egcd(a, b)[0];
+  const ehPrimo = n => { if (n < 2) return false; for (let d = 2; d * d <= n; d++) if (n % d === 0) return false; return true; };
+  const el = id => document.getElementById(id);
+
+  function atualizarDemo() {
+    const p = parseInt(el("dp").value, 10), q = parseInt(el("dq").value, 10);
+    const texto = el("dm").value;
+    el("derro").textContent = ""; el("dtabela").innerHTML = ""; el("dchaves").innerHTML = ""; el("dfinal").textContent = "";
+    if (!ehPrimo(p) || !ehPrimo(q)) { el("derro").textContent = "p e q precisam ser primos."; return; }
+    if (p === q) { el("derro").textContent = "p e q precisam ser diferentes."; return; }
+    if (p * q <= 255) { el("derro").textContent = "n = p·q precisa ser maior que 255 para caber um byte."; return; }
+    if (p > 99991 || q > 99991) { el("derro").textContent = "Use primos menores que 100000."; return; }
+    const P = BigInt(p), Q = BigInt(q), N = P * Q;
+    const L = (P - 1n) * (Q - 1n) / gcd(P - 1n, Q - 1n);
+    const E = [65537n, 17n, 7n, 5n, 3n].find(e => e < L && gcd(e, L) === 1n);
+    if (!E) { el("derro").textContent = "Não encontrei um e válido para esses primos."; return; }
+    let D = egcd(E, L)[1] % L; if (D < 0n) D += L;
+
+    el("dchaves").innerHTML =
+      `<span class="chip pub">n = ${N}</span><span class="chip pub">e = ${E}</span>` +
+      `<span class="chip">λ(n) = ${L}</span><span class="chip priv">d = ${D}</span>`;
+
+    const bytes = [...new TextEncoder().encode(texto)];
+    const cifrados = bytes.map(b => powmod(BigInt(b), E, N));
+    const decifrados = cifrados.map(c => Number(powmod(c, D, N)));
+    const contagem = {};
+    cifrados.forEach(c => { contagem[c] = (contagem[c] || 0) + 1; });
+
+    const linhas = [
+      ["byte (m)", bytes],
+      ["cifrado c = mᵉ mod n", cifrados.map(String)],
+      ["decifrado cᵈ mod n", decifrados]
+    ];
+    el("dtabela").innerHTML = linhas.map(([rot, vals], i) =>
+      `<tr><th>${rot}</th>${vals.map((v, j) =>
+        `<td class="mono${i === 1 && contagem[cifrados[j]] > 1 ? " rep" : ""}">${v}</td>`).join("")}</tr>`
+    ).join("");
+
+    const recuperado = new TextDecoder().decode(new Uint8Array(decifrados));
+    const ok = recuperado === texto;
+    el("dfinal").innerHTML = `Mensagem recuperada: <b>${esc(recuperado)}</b> ` +
+      (ok ? `<span class="pub">✓ idêntica</span>` : `<span class="priv">✗ diferente</span>`) +
+      (Object.values(contagem).some(c => c > 1)
+        ? ` · <span class="muted">células destacadas: bytes iguais geraram cifras iguais</span>` : "");
+  }
+  ["dp", "dq", "dm"].forEach(id => el(id).addEventListener("input", atualizarDemo));
+  atualizarDemo();
+})();
+</script>
+</body>
+</html>

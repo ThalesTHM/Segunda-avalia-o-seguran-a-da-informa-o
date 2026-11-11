@@ -7,7 +7,7 @@ Trabalho da **2ª avaliação de Segurança da Informação**. O programa:
 
 O algoritmo foi implementado **do zero, em Python puro** (sem bibliotecas de criptografia), seguindo a especificação oficial [RFC 8017 (PKCS #1 v2.2)](https://www.rfc-editor.org/rfc/rfc8017). Assim cada etapa do RSA fica visível no código.
 
-📊 **Apresentação:** abra o arquivo [`apresentacao.html`](apresentacao.html) no navegador. Use as setas ← → para navegar.
+📊 **Apresentação:** [`apresentacao.pdf`](apresentacao.pdf). Também está disponível em HTML: abra [`apresentacao.html`](apresentacao.html) no navegador e use as setas ← → para navegar.
 
 ## Integrantes
 
@@ -89,6 +89,7 @@ São 23 testes. Eles cobrem a aritmética (Euclides, inverso modular, Miller-Rab
 │   ├── rsa.py              # primitivas RSA, CRT, blinding, cifragem em blocos, Base64
 │   └── erros.py            # exceção ErroDecifragem
 ├── tests/test_rsa.py       # testes automatizados (unittest)
+├── apresentacao.pdf        # apresentação em PDF
 └── apresentacao.html       # apresentação explicando o código
 ```
 

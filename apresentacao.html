@@ -71,7 +71,7 @@
     font: 18px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     overflow: hidden;
   }
-  code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace; }
+  code, pre, .mono, .terminal { font-family: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace; }
 
   .deck { height: 100%; position: relative; }
   .slide {
@@ -196,6 +196,39 @@
   .capa { display: flex; flex-direction: column; justify-content: center; min-height: calc(100% - 40px); }
   .capa .meta { color: var(--muted); margin-top: 24px; font-size: 16px; }
   .dica { font-size: 14px; color: var(--muted); margin-top: 28px; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 10mm 12mm; }
+    html, body { height: auto; overflow: visible; }
+    body { font-size: 14px; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .nav, .progresso, .dica { display: none !important; }
+    .deck { height: auto; }
+    .slide { display: block !important; height: auto; overflow: visible; padding: 0; break-after: page; animation: none !important; }
+    .slide:last-child { break-after: auto; }
+    .capa { min-height: 170mm; }
+    h1 { font-size: 40px; }
+    h2 { font-size: 27px; margin-bottom: 14px; }
+    h3 { font-size: 16px; margin-bottom: 5px; }
+    .tag { font-size: 11.5px; margin-bottom: 4px; }
+    .lead { font-size: 18px; }
+    small, .small { font-size: 13px; }
+    .grid { gap: 10px; }
+    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    .code-lado { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) !important; }
+    .cena { grid-template-columns: 1fr auto 1fr !important; }
+    .card { padding: 12px 14px; }
+    .card[style*="margin-bottom"] { margin-bottom: 12px !important; }
+    li { margin-bottom: 4px; }
+    .formula { font-size: 18px; padding: 4px 10px; margin: 2px 0 6px; }
+    pre.codigo { font-size: 11px; line-height: 1.42; padding: 12px 14px; white-space: pre; overflow: visible; }
+    .terminal { font-size: 10.5px; line-height: 1.4; padding: 12px 14px; white-space: pre-wrap; }
+    table { font-size: 13.5px; }
+    th, td { padding: 6px 8px; }
+    .bytes { font-size: 12.5px; }
+    .bytes div { padding: 6px 4px; }
+    .card { break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -694,8 +727,8 @@ Ran 23 tests in 0.278s
 
 <!-- 14. DEMO INTERATIVA -->
 <section class="slide">
-  <p class="tag">Experimente</p>
-  <h2>RSA de livro-texto no navegador</h2>
+  <p class="tag">Exemplo visual</p>
+  <h2>RSA de livro-texto, byte a byte</h2>
   <p class="small muted">Versão simplificada, com primos pequenos e sem OAEP, que cifra cada byte separadamente. Repare que bytes iguais geram o mesmo texto cifrado: esse é o problema que o OAEP resolve.</p>
   <div class="demo-form">
     <label>p (primo)<input class="num" id="dp" type="number" value="61" min="2" max="99991"></label>
@@ -766,7 +799,6 @@ Ran 23 tests in 0.278s
     </div>
   </div>
   <p style="margin-top:22px" class="muted">Código: github.com/ThalesTHM/Segunda-avalia-o-seguran-a-da-informa-o</p>
-  <h1 style="margin-top:20px">Obrigado! Perguntas?</h1>
 </section>
 
 </main>
